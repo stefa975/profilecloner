@@ -240,7 +240,7 @@ public class GenericCloner implements Cloner {
                 String valueName = child.asProperty().getName();
                 ModelNode value = child.asProperty().getValue();
 
-                if (isUndefined(value)) {
+                if (isUndefined(value) || valueName.equalsIgnoreCase("name")) {
                     continue;
                 }
 
