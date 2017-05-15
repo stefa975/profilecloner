@@ -156,6 +156,28 @@ public class GenericCloner implements Cloner {
             }
 
             // Messaging has a concept "runtime-queue" which shows up even when asked include-runtime=false
+            if (addressString.matches(".*/subsystem=\"web\"/virtual-server=.*")) {
+                attributes = removeAttribute("name", attributes);
+            }
+            if (addressString.matches(".*/subsystem=\"web\"/connector=.*")) {
+                attributes = removeAttribute("name", attributes);
+            }
+            if (addressString.matches(".*/subsystem=\"jca\"/workmanager=.*")) {
+                if (elementName.contains("running-threads")) {
+                    attributes = removeAttribute("name", attributes);
+                }
+            }
+            if (addressString.matches(".*/subsystem=\"ejb3\"/thread-pool=.*")) {
+                attributes = removeAttribute("name", attributes);
+            }
+
+            if (addressString.matches("/socket-binding-group=.*")) {
+                if (elementName.contains("socket-binding")) {
+                    attributes = removeAttribute("name", attributes);
+                }
+            }
+
+            // Messaging has a concept "runtime-queue" which shows up even when asked include-runtime=false
             if (addressString.matches(".*/subsystem=\"messaging\"/hornetq-server=.*/runtime-queue=.*")) {
                 destinationAddress.pop();
                 return commands;
@@ -209,11 +231,31 @@ public class GenericCloner implements Cloner {
             if ((addressString.equals("/profile=\"" + destinationName + "\""))) {
                 attributes = new StringBuilder(attributes.toString().replaceAll("name=.*,", ""));
             }
-
+            if ((addressString.equals("/socket-binding-group=\"" + destinationName + "\""))) {
+                attributes = new StringBuilder(attributes.toString().replaceAll("name=.*,", ""));
+            }
             commands.add(0,buildAdd("add", attributes));
         }
         return commands;
      }
+
+
+    protected StringBuilder removeAttribute(String attr, StringBuilder attributes) {
+        String[] splits = attributes.toString().split(",");
+        StringBuilder res = new StringBuilder();
+        for (String a : splits) {
+            if (a.startsWith(attr + "=")) {
+                continue;
+            }
+            res.append(a).append(',');
+        }
+        if (res.length() > 1) {
+            return removeComma(res);
+        } else {
+            return res;
+        }
+    }
+
 
     protected String buildAdd(String command, StringBuilder attributes) {
         StringBuilder cmd = destinationAddress.toStringBuilder().append(":").append(command).append("(").append(attributes);
@@ -240,7 +282,7 @@ public class GenericCloner implements Cloner {
                 String valueName = child.asProperty().getName();
                 ModelNode value = child.asProperty().getValue();
 
-                if (isUndefined(value) || valueName.equalsIgnoreCase("name")) {
+                if (isUndefined(value)) {
                     continue;
                 }
 
